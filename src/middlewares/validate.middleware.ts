@@ -9,7 +9,12 @@ export function validate(schema: ZodSchema, target: ValidateTarget = 'body'): Re
     if (!result.success) {
       return next(result.error);
     }
-    req[target] = result.data;
+    Object.defineProperty(req, target, {
+      value: result.data,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 }
