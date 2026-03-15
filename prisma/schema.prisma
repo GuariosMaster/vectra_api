@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Lang {
+  ES
+  EN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PersonalizStatus {
+  PENDING
+  IN_REVIEW
+  QUOTED
+  ACCEPTED
+  REJECTED
+}
+
+// ─── Auth ────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String?
+  googleId     String?   @unique
+  role         Role      @default(USER)
+  firstName    String?
+  lastName     String?
+  phone        String?
+  lang         Lang      @default(ES)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  refreshTokens  RefreshToken[]
+  orders         Order[]
+  addresses      Address[]
+  customRequests PersonalizationRequest[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// ─── Catalog ─────────────────────────────────────────────────────────────────
+
+model Category {
+  id       String    @id @default(uuid())
+  slug     String    @unique
+  nameEs   String
+  nameEn   String
+  products Product[]
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  nameEs        String
+  nameEn        String
+  shortDescEs   String
+  shortDescEn   String
+  descriptionEs String   @db.Text
+  descriptionEn String   @db.Text
+  price         Decimal  @db.Decimal(10, 2)
+  comparePrice  Decimal? @db.Decimal(10, 2)
+  stock         Int      @default(0)
+  inStock       Boolean  @default(true)
+  featured      Boolean  @default(false)
+  material      String?
+  dimensions    String?
+  weight        String?
+  printTime     String?
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id])
+  images        ProductImage[]
+  tags          ProductTag[]
+  orderItems    OrderItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(uuid())
+  url       String
+  alt       String?
+  order     Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id       String       @id @default(uuid())
+  slug     String       @unique
+  nameEs   String
+  nameEn   String
+  products ProductTag[]
+  posts    PostTag[]
+}
+
+model ProductTag {
+  productId String
+  tagId     String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+}
+
+// ─── Blog ────────────────────────────────────────────────────────────────────
+
+model Post {
+  id          String    @id @default(uuid())
+  slug        String    @unique
+  titleEs     String
+  titleEn     String
+  excerptEs   String
+  excerptEn   String
+  contentEs   String    @db.Text
+  contentEn   String    @db.Text
+  coverImage  String
+  author      String
+  draft       Boolean   @default(true)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tags        PostTag[]
+}
+
+model PostTag {
+  postId String
+  tagId  String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+// ─── Orders ──────────────────────────────────────────────────────────────────
+
+model Order {
+  id            String        @id @default(uuid())
+  orderNumber   String        @unique
+  userId        String?
+  user          User?         @relation(fields: [userId], references: [id])
+  guestEmail    String?
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String?
+  paymentId     String?
+  subtotal      Decimal       @db.Decimal(10, 2)
+  tax           Decimal       @default(0) @db.Decimal(10, 2)
+  shipping      Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+  notes         String?
+  items         OrderItem[]
+  shippingAddr  OrderAddress?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  unitPrice   Decimal @db.Decimal(10, 2)
+  quantity    Int
+  subtotal    Decimal @db.Decimal(10, 2)
+}
+
+model OrderAddress {
+  id         String @id @default(uuid())
+  orderId    String @unique
+  order      Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  firstName  String
+  lastName   String
+  email      String
+  phone      String
+  address    String
+  city       String
+  state      String
+  postalCode String
+  country    String @default("AR")
+}
+
+model Address {
+  id         String  @id @default(uuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String?
+  firstName  String
+  lastName   String
+  phone      String?
+  address    String
+  city       String
+  state      String
+  postalCode String
+  country    String  @default("AR")
+  isDefault  Boolean @default(false)
+}
+
+// ─── Personalization ─────────────────────────────────────────────────────────
+
+model PersonalizationRequest {
+  id             String           @id @default(uuid())
+  userId         String?
+  user           User?            @relation(fields: [userId], references: [id])
+  description    String           @db.Text
+  referenceUrl   String?
+  referenceImage String?
+  name           String
+  email          String
+  phone          String?
+  lang           Lang             @default(ES)
+  status         PersonalizStatus @default(PENDING)
+  adminNotes     String?
+  quotedPrice    Decimal?         @db.Decimal(10, 2)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
