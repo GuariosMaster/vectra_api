@@ -18,15 +18,22 @@ const orderInclude = {
 };
 
 export async function createOrder(body: CreateOrderBody, userId?: string) {
-  // Validate products + stock
+  // Validate products + stock (accepts slug or UUID as productId)
   const productIds = body.items.map((i) => i.productId);
-  const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+  const products = await prisma.product.findMany({
+    where: { OR: [{ id: { in: productIds } }, { slug: { in: productIds } }] },
+  });
 
   if (products.length !== productIds.length) {
     throw new AppError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'One or more products not found');
   }
 
-  const productMap = new Map(products.map((p) => [p.id, p]));
+  // Build map keyed by both id and slug for transparent lookup
+  const productMap = new Map<string, (typeof products)[0]>();
+  for (const p of products) {
+    productMap.set(p.id, p);
+    productMap.set(p.slug, p);
+  }
 
   for (const item of body.items) {
     const product = productMap.get(item.productId)!;
@@ -39,13 +46,13 @@ export async function createOrder(body: CreateOrderBody, userId?: string) {
     }
   }
 
-  // Calculate totals
+  // Calculate totals (always store the real UUID in productId)
   const itemsData = body.items.map((item) => {
     const product = productMap.get(item.productId)!;
     const unitPrice = Number(product.price);
     const subtotal = unitPrice * item.quantity;
     return {
-      productId: item.productId,
+      productId: product.id,
       productName: product.nameEs,
       unitPrice: new Decimal(unitPrice),
       quantity: item.quantity,
@@ -72,10 +79,11 @@ export async function createOrder(body: CreateOrderBody, userId?: string) {
       include: orderInclude,
     });
 
-    // Decrement stock
+    // Decrement stock (resolve to real UUID via map)
     for (const item of body.items) {
+      const product = productMap.get(item.productId)!;
       await tx.product.update({
-        where: { id: item.productId },
+        where: { id: product.id },
         data: { stock: { decrement: item.quantity } },
       });
     }
@@ -104,7 +112,8 @@ export async function listOrders(query: OrderQuery, userId?: string, isAdmin = f
 export async function getOrder(id: string, userId?: string, isAdmin = false) {
   const order = await prisma.order.findUnique({ where: { id }, include: orderInclude });
   if (!order) throw new AppError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Order not found');
-  if (!isAdmin && order.userId !== userId) {
+  // Guest orders (userId null) are viewable by anyone who knows the UUID
+  if (!isAdmin && order.userId !== null && order.userId !== userId) {
     throw new AppError(HTTP_STATUS.FORBIDDEN, ERROR_CODES.FORBIDDEN, 'Access denied');
   }
   return order;

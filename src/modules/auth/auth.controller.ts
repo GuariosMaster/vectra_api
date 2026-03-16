@@ -12,6 +12,16 @@ const COOKIE_OPTIONS = {
   path: '/',
 };
 
+export async function register(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { accessToken, refreshToken, user } = await authService.register(req.body);
+    res.cookie(COOKIE_NAME, refreshToken, COOKIE_OPTIONS);
+    sendSuccess(res, { accessToken, user }, 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const { accessToken, refreshToken, user } = await authService.loginWithPassword(req.body);

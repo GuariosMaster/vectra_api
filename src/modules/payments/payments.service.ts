@@ -33,7 +33,7 @@ export async function createMpPreference(orderId: string) {
         title: item.productName,
         unit_price: Number(item.unitPrice),
         quantity: item.quantity,
-        currency_id: 'ARS',
+        currency_id: 'COP',
       })),
       payer: order.shippingAddr
         ? {
@@ -48,9 +48,9 @@ export async function createMpPreference(orderId: string) {
           }
         : undefined,
       back_urls: {
-        success: `${env.FRONTEND_URL}/orders/${order.id}?status=success`,
-        failure: `${env.FRONTEND_URL}/orders/${order.id}?status=failure`,
-        pending: `${env.FRONTEND_URL}/orders/${order.id}?status=pending`,
+        success: `${env.FRONTEND_URL}/orders?id=${order.id}&status=success`,
+        failure: `${env.FRONTEND_URL}/orders?id=${order.id}&status=failure`,
+        pending: `${env.FRONTEND_URL}/orders?id=${order.id}&status=pending`,
       },
       auto_return: 'approved',
       notification_url: `${env.FRONTEND_URL?.replace('4321', '3000')}/api/v1/payments/mp/webhook`,

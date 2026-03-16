@@ -9,11 +9,11 @@ const addressSchema = z.object({
   city: z.string().min(1),
   state: z.string().min(1),
   postalCode: z.string().min(1),
-  country: z.string().default('AR'),
+  country: z.string().default('CO'),
 });
 
 const itemSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.string().min(1), // accepts slug or UUID
   quantity: z.number().int().positive(),
 });
 

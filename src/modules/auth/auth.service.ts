@@ -5,7 +5,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../uti
 import { hashPassword, comparePassword } from '../../utils/hash.js';
 import { AppError } from '../../middlewares/error.middleware.js';
 import { HTTP_STATUS, ERROR_CODES } from '../../config/constants.js';
-import type { LoginBody } from './auth.schemas.js';
+import type { LoginBody, RegisterBody } from './auth.schemas.js';
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -23,6 +23,27 @@ async function issueTokens(userId: string, role: string) {
   });
 
   return { accessToken, refreshToken };
+}
+
+export async function register(body: RegisterBody) {
+  const existing = await prisma.user.findUnique({ where: { email: body.email } });
+  if (existing) {
+    throw new AppError(HTTP_STATUS.CONFLICT, ERROR_CODES.CONFLICT, 'Email already registered');
+  }
+
+  const passwordHash = await hashPassword(body.password);
+  const user = await prisma.user.create({
+    data: {
+      email: body.email,
+      passwordHash,
+      firstName: body.firstName,
+      lastName: body.lastName,
+    },
+  });
+
+  const tokens = await issueTokens(user.id, user.role);
+  const { passwordHash: _, ...safeUser } = user;
+  return { ...tokens, user: safeUser };
 }
 
 export async function loginWithPassword(body: LoginBody) {
