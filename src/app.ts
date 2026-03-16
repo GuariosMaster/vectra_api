@@ -22,35 +22,51 @@ import userRoutes from './modules/users/users.routes.js';
 
 const app = express();
 
-// ─── Security & parsing ──────────────────────────────────────────────────────
-app.use(helmet());
+// ─── Security headers (Helmet) ───────────────────────────────────────────────
+// contentSecurityPolicy disabled: this is a JSON API, not an HTML server
+app.use(helmet({ contentSecurityPolicy: false }));
+
+// ─── CORS ────────────────────────────────────────────────────────────────────
 app.use(
   cors({
     origin: env.FRONTEND_URL,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ─── Rate limiting ───────────────────────────────────────────────────────────
-const authLimiter = rateLimit({
+const isDev = env.NODE_ENV === 'development';
+
+// Login / register: strict — prevents brute force (5 attempts per 15 min per IP)
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests' } },
+  max: 5,
+  skip: () => isDev,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' } },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
+// General API: 500 req / 15 min — enough for heavy admin use, blocks automated scraping
+// The MP webhook (/api/v1/payments/mp/webhook) is also covered but MercadoPago
+// sends at most a few webhooks per payment, so 500/15min is never reached.
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
+  skip: () => isDev,
+  message: { success: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again later.' } },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-app.use('/api/v1/auth', authLimiter);
+app.use('/api/v1/auth/login', loginLimiter);
+app.use('/api/v1/auth/register', loginLimiter);
 app.use('/api', generalLimiter);
 
 // ─── Static uploads (local fallback when Cloudinary is not configured) ───────
