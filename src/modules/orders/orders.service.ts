@@ -124,3 +124,9 @@ export async function updateOrderStatus(id: string, body: UpdateStatusBody) {
   if (!order) throw new AppError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Order not found');
   return prisma.order.update({ where: { id }, data: { status: body.status }, include: orderInclude });
 }
+
+export async function deleteOrder(id: string) {
+  const order = await prisma.order.findUnique({ where: { id } });
+  if (!order) throw new AppError(HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND, 'Order not found');
+  await prisma.order.delete({ where: { id } });
+}

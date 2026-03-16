@@ -10,5 +10,6 @@ router.post('/', optionalAuth, validate(createOrderSchema), controller.create);
 router.get('/', verifyToken, validate(orderQuerySchema, 'query'), controller.list);
 router.get('/:id', optionalAuth, controller.get);
 router.put('/:id/status', verifyToken, requireAdmin, validate(updateStatusSchema), controller.updateStatus);
+router.delete('/:id', verifyToken, requireAdmin, controller.remove);
 
 export default router;

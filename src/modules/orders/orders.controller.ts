@@ -33,3 +33,10 @@ export async function updateStatus(req: Request, res: Response, next: NextFuncti
     sendSuccess(res, order);
   } catch (err) { next(err); }
 }
+
+export async function remove(req: Request, res: Response, next: NextFunction) {
+  try {
+    await svc.deleteOrder(req.params['id'] as string);
+    res.status(HTTP_STATUS.NO_CONTENT).end();
+  } catch (err) { next(err); }
+}
