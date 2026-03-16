@@ -1,24 +1,39 @@
 import { z } from 'zod';
 
+// Correctly handles boolean strings from FormData ("true"/"false") as well as real booleans
+const boolFromForm = z
+  .union([z.literal('true'), z.literal('false'), z.boolean()])
+  .transform((v) => v === true || v === 'true');
+
+// Handles tagIds sent as repeated FormData fields (multer gives string or string[])
+const tagIdsFromForm = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null) return [];
+    if (Array.isArray(val)) return val;
+    return [val];
+  },
+  z.array(z.string().uuid()),
+);
+
 export const createProductSchema = z.object({
   slug: z.string().min(1),
   nameEs: z.string().min(1),
-  nameEn: z.string().min(1),
+  nameEn: z.string().optional(),
   shortDescEs: z.string().min(1),
-  shortDescEn: z.string().min(1),
+  shortDescEn: z.string().optional(),
   descriptionEs: z.string().min(1),
-  descriptionEn: z.string().min(1),
+  descriptionEn: z.string().optional(),
   price: z.coerce.number().positive(),
   comparePrice: z.coerce.number().positive().optional(),
   stock: z.coerce.number().int().min(0).default(0),
-  inStock: z.coerce.boolean().default(true),
-  featured: z.coerce.boolean().default(false),
+  inStock: boolFromForm.default(true),
+  featured: boolFromForm.default(false),
   material: z.string().optional(),
   dimensions: z.string().optional(),
   weight: z.string().optional(),
   printTime: z.string().optional(),
   categoryId: z.string().uuid(),
-  tagIds: z.array(z.string().uuid()).default([]),
+  tagIds: tagIdsFromForm.default([]),
 });
 
 export const updateProductSchema = createProductSchema.partial();

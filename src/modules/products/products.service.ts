@@ -48,6 +48,9 @@ export async function createProduct(body: CreateProductBody, imageBuffers?: Buff
   const product = await prisma.product.create({
     data: {
       ...data,
+      nameEn: data.nameEn ?? data.nameEs,
+      shortDescEn: data.shortDescEn ?? data.shortDescEs,
+      descriptionEn: data.descriptionEn ?? data.descriptionEs,
       price: data.price,
       comparePrice: data.comparePrice ?? null,
       tags: { create: tagIds.map((tagId) => ({ tagId })) },
@@ -56,12 +59,16 @@ export async function createProduct(body: CreateProductBody, imageBuffers?: Buff
   });
 
   if (imageBuffers?.length) {
-    const uploads = await Promise.all(
-      imageBuffers.map((buf, i) => uploadImage(buf, 'vectra/products', `${product.id}-${i}`))
-    );
-    await prisma.productImage.createMany({
-      data: uploads.map((u, i) => ({ url: u.url, order: i, productId: product.id })),
-    });
+    try {
+      const uploads = await Promise.all(
+        imageBuffers.map((buf, i) => uploadImage(buf, 'vectra/products', `${product.id}-${i}`))
+      );
+      await prisma.productImage.createMany({
+        data: uploads.map((u, i) => ({ url: u.url, order: i, productId: product.id })),
+      });
+    } catch (err) {
+      console.error('[createProduct] Image upload failed:', err);
+    }
   }
 
   return prisma.product.findUnique({ where: { id: product.id }, include: productInclude });
@@ -77,6 +84,9 @@ export async function updateProduct(id: string, body: UpdateProductBody, imageBu
     where: { id },
     data: {
       ...data,
+      nameEn: data.nameEn ?? data.nameEs,
+      shortDescEn: data.shortDescEn ?? data.shortDescEs,
+      descriptionEn: data.descriptionEn ?? data.descriptionEs,
       price: data.price,
       comparePrice: data.comparePrice ?? undefined,
       ...(tagIds !== undefined && {
@@ -89,12 +99,16 @@ export async function updateProduct(id: string, body: UpdateProductBody, imageBu
   });
 
   if (imageBuffers?.length) {
-    const uploads = await Promise.all(
-      imageBuffers.map((buf, i) => uploadImage(buf, 'vectra/products', `${id}-new-${Date.now()}-${i}`))
-    );
-    await prisma.productImage.createMany({
-      data: uploads.map((u, i) => ({ url: u.url, order: i, productId: id })),
-    });
+    try {
+      const uploads = await Promise.all(
+        imageBuffers.map((buf, i) => uploadImage(buf, 'vectra/products', `${id}-new-${Date.now()}-${i}`))
+      );
+      await prisma.productImage.createMany({
+        data: uploads.map((u, i) => ({ url: u.url, order: i, productId: id })),
+      });
+    } catch (err) {
+      console.error('[updateProduct] Image upload failed:', err);
+    }
   }
 
   return prisma.product.findUnique({ where: { id }, include: productInclude });

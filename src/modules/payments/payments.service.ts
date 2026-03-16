@@ -25,6 +25,11 @@ export async function createMpPreference(orderId: string) {
   const client = getMpClient();
   const preference = new Preference(client);
 
+  // localhost URLs are not accepted by MercadoPago for back_urls/webhooks
+  const isPublic = (url: string) => !url.includes('localhost') && !url.includes('127.0.0.1');
+  const frontendIsPublic = isPublic(env.FRONTEND_URL);
+  const apiIsPublic = isPublic(env.API_URL);
+
   const result = await preference.create({
     body: {
       external_reference: order.id,
@@ -47,13 +52,17 @@ export async function createMpPreference(orderId: string) {
             },
           }
         : undefined,
-      back_urls: {
-        success: `${env.FRONTEND_URL}/orders?id=${order.id}&status=success`,
-        failure: `${env.FRONTEND_URL}/orders?id=${order.id}&status=failure`,
-        pending: `${env.FRONTEND_URL}/orders?id=${order.id}&status=pending`,
-      },
-      auto_return: 'approved',
-      notification_url: `${env.API_URL}/api/v1/payments/mp/webhook`,
+      ...(frontendIsPublic && {
+        back_urls: {
+          success: `${env.FRONTEND_URL}/orders?id=${order.id}&status=success`,
+          failure: `${env.FRONTEND_URL}/orders?id=${order.id}&status=failure`,
+          pending: `${env.FRONTEND_URL}/orders?id=${order.id}&status=pending`,
+        },
+        auto_return: 'approved' as const,
+      }),
+      ...(apiIsPublic && {
+        notification_url: `${env.API_URL}/api/v1/payments/mp/webhook`,
+      }),
     },
   });
 

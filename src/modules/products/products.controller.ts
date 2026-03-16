@@ -20,7 +20,9 @@ export async function get(req: Request, res: Response, next: NextFunction) {
 
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
-    const files = (req.files as Express.Multer.File[] | undefined)?.map((f) => f.buffer);
+    const multerFiles = req.files as Express.Multer.File[] | undefined;
+    console.log(`[create] req.files count: ${multerFiles?.length ?? 0}`);
+    const files = multerFiles?.map((f) => f.buffer);
     const product = await svc.createProduct(req.body, files);
     sendSuccess(res, product, HTTP_STATUS.CREATED);
   } catch (err) { next(err); }

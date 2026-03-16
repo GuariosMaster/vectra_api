@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import { env } from './config/env.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import { sendSuccess } from './utils/response.js';
@@ -17,6 +18,7 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes.js';
 import orderRoutes from './modules/orders/orders.routes.js';
 import paymentRoutes from './modules/payments/payments.routes.js';
 import personalizationRoutes from './modules/personalization/personalization.routes.js';
+import userRoutes from './modules/users/users.routes.js';
 
 const app = express();
 
@@ -51,6 +53,9 @@ const generalLimiter = rateLimit({
 app.use('/api/v1/auth', authLimiter);
 app.use('/api', generalLimiter);
 
+// ─── Static uploads (local fallback when Cloudinary is not configured) ───────
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // ─── Health ──────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => sendSuccess(res, { status: 'ok', version: '1.0.0' }));
 app.get('/api/v1', (_req, res) => sendSuccess(res, { name: 'Vectra API', version: '1.0.0' }));
@@ -65,6 +70,7 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/personalization', personalizationRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // ─── Error handler ───────────────────────────────────────────────────────────
 app.use(errorMiddleware);

@@ -4,7 +4,7 @@ import { verifyToken, optionalAuth } from '../../middlewares/auth.middleware.js'
 
 const router = Router();
 
-router.post('/mp/create', optionalAuth, createPreference);
+router.post('/mp/preference', optionalAuth, createPreference);
 router.post('/mp/webhook', webhook); // public — MP calls this
 
 export default router;

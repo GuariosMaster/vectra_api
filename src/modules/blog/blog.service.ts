@@ -35,7 +35,13 @@ export async function createPost(body: CreatePostBody) {
   if (existing) throw new AppError(HTTP_STATUS.CONFLICT, ERROR_CODES.CONFLICT, 'Slug already exists');
 
   return prisma.post.create({
-    data: { ...data, tags: { create: tagIds.map((tagId) => ({ tagId })) } },
+    data: {
+      ...data,
+      titleEn: data.titleEn ?? data.titleEs,
+      excerptEn: data.excerptEn ?? data.excerptEs,
+      contentEn: data.contentEn ?? data.contentEs,
+      tags: { create: tagIds.map((tagId) => ({ tagId })) },
+    },
     include: postInclude,
   });
 }
@@ -50,6 +56,9 @@ export async function updatePost(id: string, body: UpdatePostBody) {
     where: { id },
     data: {
       ...data,
+      titleEn: data.titleEn ?? data.titleEs,
+      excerptEn: data.excerptEn ?? data.excerptEs,
+      contentEn: data.contentEn ?? data.contentEs,
       ...(tagIds !== undefined && {
         tags: { deleteMany: {}, create: tagIds.map((tagId) => ({ tagId })) },
       }),
