@@ -7,7 +7,10 @@ export async function createPreference(req: Request, res: Response, next: NextFu
     const { orderId } = req.body as { orderId: string };
     const result = await createMpPreference(orderId);
     sendSuccess(res, result);
-  } catch (err) { next(err); }
+  } catch (err) {
+    console.error('[createPreference] MP error:', JSON.stringify(err, null, 2));
+    next(err);
+  }
 }
 
 export async function webhook(req: Request, res: Response, next: NextFunction) {
