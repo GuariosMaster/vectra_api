@@ -71,7 +71,11 @@ export async function createMpPreference(orderId: string) {
     data: { paymentMethod: 'MERCADOPAGO' },
   });
 
-  return { preferenceId: result.id, initPoint: result.init_point, sandboxInitPoint: result.sandbox_init_point };
+  // TEST tokens must use sandbox_init_point; PROD tokens use init_point
+  const isSandbox = env.MP_ACCESS_TOKEN!.startsWith('TEST-');
+  const checkoutUrl = isSandbox ? result.sandbox_init_point! : result.init_point!;
+
+  return { preferenceId: result.id, checkoutUrl };
 }
 
 export async function handleMpWebhook(body: Record<string, unknown>, signature: string | undefined) {
