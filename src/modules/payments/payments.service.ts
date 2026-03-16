@@ -53,7 +53,7 @@ export async function createMpPreference(orderId: string) {
         pending: `${env.FRONTEND_URL}/orders?id=${order.id}&status=pending`,
       },
       auto_return: 'approved',
-      notification_url: `${env.FRONTEND_URL?.replace('4321', '3000')}/api/v1/payments/mp/webhook`,
+      notification_url: `${env.API_URL}/api/v1/payments/mp/webhook`,
     },
   });
 
